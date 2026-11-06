@@ -1,0 +1,5 @@
+keyboard
+matplotlib
+numpy
+scipy
+xdialog

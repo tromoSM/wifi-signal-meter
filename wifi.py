@@ -1,10 +1,8 @@
-from time import sleep
 from subprocess import check_output,CalledProcessError
 from re import search
 from keyboard import is_pressed
 from matplotlib import pyplot
-from matplotlib.animation import FuncAnimation
-from numpy import arange,pi,sin,linspace,array
+from numpy import arange,linspace,array
 from scipy.interpolate import make_interp_spline
 from sys import argv
 from xdialog import yesno,YES,warning
@@ -13,10 +11,15 @@ from xdialog import yesno,YES,warning
 # Retrieved 2026-11-05, License - CC BY-SA 4.0
 
 livemode=False
+finalssid=False
+print('Visit https://github.com/tromoSM/wifi-signal-meter for issues\n')
 if len(argv)>1:
     for arg in argv[1:]:
-        if arg=='live':
+        if arg.replace('-','').lower()=='live':
             livemode=True
+        if arg.startswith('previewssid='):
+            finalssid=arg.split("=")[1]
+            print(f'ssid name in the graph set to {finalssid}')
 
 f,a=pyplot.subplots()
 if livemode:
@@ -98,8 +101,8 @@ def status():
             wifichanged=True
             if ssid.group(1) not in ssidlist:
                 ssidlist.append(ssid.group(1))
-            if livemode:
-               answer=yesno('Wifi',f'Wifi network changed from {lastssid} to {ssid.group(1)}. Do you want to continue ?')
+            if livemode and not finalssid:
+               answer=yesno('Wifi signal meter',f'Wifi network changed from {lastssid} to {ssid.group(1)}. Do you want to continue ?')
                if answer!=YES:
                   Running=False
             lastssid=ssid.group(1)
@@ -127,6 +130,8 @@ def status():
         line.set_color(colors[signallevel.lower()])
     levelinfo=signallevel
     signalleveltext.set_text(f'SIGNAL : {signallevel.upper()}')
+    if finalssid:
+        lastssid=finalssid
     ssidtext.set_text(f'SSID : {lastssid.upper()}')
     print(f'signal{(" ("+lastssid+") ") if lastssid!='' else ""}: {finalcount} {('↑' if int(finalcount)>=old else "↓") if outputav else "×"}'.ljust(20+len(lastssid)),sep='',end="\r",flush=True)
     old=int(finalcount)
@@ -157,7 +162,12 @@ if not livemode:
     ssidtxt=lastssid
     if wifichanged:
         ssidtxt=' | '.join(ssidlist)
+    if finalssid:
+        ssidtxt=finalssid
     ssidtext.set_text(f'SSID : {ssidtxt.upper()}')
+    print('Results')
+    print(f'Average signal strength : {average}%')
+    print(f'Level : {getsignallevel(average,True).upper()}')
     x=arange(len(signallist))
     y=array(signallist)
     xy=make_interp_spline(x, y)
@@ -166,6 +176,6 @@ if not livemode:
     pyplot.plot(X,Y)
     pyplot.ylim(min(signallist),max(signallist))
     pyplot.grid(True)
-    if wifichanged:
-        warning('Wifi',f'Wifi network changed while measuring signal. Results might be from different networks\n\nNetworks : {','.join(ssidlist)}')
+    if wifichanged and not finalssid:
+        warning('Wifi signal meter',f'Wifi network changed while measuring signal. Results might be from different networks\n\nNetworks : {','.join(ssidlist)}')
     pyplot.show()
